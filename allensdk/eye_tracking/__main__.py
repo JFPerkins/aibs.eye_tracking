@@ -15,6 +15,7 @@ from .eye_tracking import EyeTracker  # noqa: E402
 from .frame_stream import CvInputStream, CvOutputStream  # noqa: E402
 from .plotting import (plot_summary, plot_cumulative,
                        annotate_with_box)  # noqa: E402
+from .feature_extraction import get_filter  # noqa: E402
 
 
 def setup_annotation(im_shape, annotate_movie, output_file, fourcc="H264"):
@@ -77,6 +78,13 @@ def get_starburst_args(kwargs):
     return starburst_args
 
 
+def load_prefilter(kwargs):
+    if kwargs.get("apply_prefilter", False):
+        return get_filter(kwargs.get("prefilter_class"),
+                          **kwargs.get("prefilter_kwargs", {}))
+    return None
+
+
 def main():
     """Main entry point for running AllenSDK Eye Tracking."""
     try:
@@ -91,6 +99,8 @@ def main():
 
         ostream = setup_annotation(im_shape, **mod.args["annotation"])
 
+        prefilter = load_prefilter(mod.args.get("prefilter", {}))
+
         tracker = EyeTracker(im_shape, istream,
                              ostream,
                              starburst_args,
@@ -98,6 +108,7 @@ def main():
                              mod.args["pupil_bounding_box"],
                              mod.args["cr_bounding_box"],
                              mod.args["qc"]["generate_plots"],
+                             prefilter,
                              **mod.args["eye_params"])
         pupil_parameters, cr_parameters = tracker.process_stream(
             start=mod.args.get("start_frame", 0),

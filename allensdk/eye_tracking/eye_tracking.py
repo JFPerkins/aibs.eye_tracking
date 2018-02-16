@@ -213,6 +213,9 @@ class EyeTracker(object):
         [xmin xmax ymin ymax] bounding box for cr seed point search.
     generate_QC_output : bool
         Flag to compute extra QC data on frames.
+    prefilter : `allensdk.eye_tracking.feature_extraction.ImagePrefilter`
+        Instance of a specific image prefilter, if image prefiltering is
+        required.
     **kwargs
         pupil_min_value : int
         pupil_max_value : int
@@ -220,6 +223,9 @@ class EyeTracker(object):
         pupil_mask_radius : int
         cr_recolor_scale_factor : float
         recolor_cr : bool
+        adaptive_pupil : bool
+        smoothing_kernel_size : int
+        clip_pupil_threshold : bool
     """
     DEFAULT_MIN_PUPIL_VALUE = 0
     DEFAULT_MAX_PUPIL_VALUE = 30
@@ -235,7 +241,8 @@ class EyeTracker(object):
     def __init__(self, im_shape, input_stream, output_stream=None,
                  starburst_params=None, ransac_params=None,
                  pupil_bounding_box=None, cr_bounding_box=None,
-                 generate_QC_output=DEFAULT_GENERATE_QC_OUTPUT, **kwargs):
+                 generate_QC_output=DEFAULT_GENERATE_QC_OUTPUT,
+                 prefilter=None, **kwargs):
         if starburst_params is None:
             starburst_params = {}
         if ransac_params is None:
@@ -261,6 +268,7 @@ class EyeTracker(object):
         self.cr_filled_image = None
         self.pupil_max_image = None
         self._mean_frame = None
+        self.prefilter = prefilter
         self._init_kwargs(**kwargs)
         self.frame_index = 0
 
@@ -423,6 +431,11 @@ class EyeTracker(object):
         value = min(self.max_pupil_value, value)
         self.last_pupil_color = value
 
+    def apply_prefilter(self, image):
+        if self.prefilter is not None:
+            return self.prefilter.apply(image)
+        return image
+
     def process_image(self, image):
         """Process an image to find pupil and corneal reflection.
 
@@ -438,7 +451,7 @@ class EyeTracker(object):
         pupil_parameters : tuple
             (x, y, r, a, b) pupil parameters.
         """
-        self.current_image = image
+        self.current_image = self.apply_prefilter(image)
         self.blurred_image = medfilt2d(image,
                                        kernel_size=self.smoothing_kernel_size)
         try:

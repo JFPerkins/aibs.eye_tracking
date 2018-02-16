@@ -1,7 +1,41 @@
 import numpy as np
 from scipy.signal import fftconvolve
+import cv2
 
 _CIRCLE_MASKS = {}
+
+
+class ImagePrefilter(object):
+    def apply(self, frame):
+        raise NotImplementedError("`apply` must be implemented in a subclass")
+
+
+class CLAHEPrefilter(ImagePrefilter):
+    DEFAULT_CLIP_LIMIT = 3.0
+    DEFAULT_TILE_GRID_SIZE = 8
+
+    def __init__(self, **kwargs):
+        self.clip_limit = kwargs.get("clip_limit", self.DEFAULT_CLIP_LIMIT)
+        self.tile_grid_size = kwargs.get("tile_grid_size",
+                                         self.DEFAULT_TILE_GRID_SIZE)
+        self.clahe = cv2.createCLAHE(
+            self.clip_limit, (self.tile_grid_size, self.tile_grid_size))
+        super(CLAHEPrefilter, self).__init__(**kwargs)
+
+    def apply(self, frame):
+        return self.clahe.apply(frame)
+
+
+_PREFILTERS = {"CLAHE": CLAHEPrefilter}
+
+
+def get_filter(filter_name, *args, **kwargs):
+    try:
+        klass = _PREFILTERS[filter_name]
+        return klass(*args, **kwargs)
+    except KeyError:
+        raise ValueError(("{} is an invalid prefilter name. Valid choices are:"
+                          " {}").format(filter_name, _PREFILTERS.keys()))
 
 
 def get_circle_mask(radius):

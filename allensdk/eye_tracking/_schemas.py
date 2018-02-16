@@ -1,7 +1,7 @@
 from argschema import ArgSchema
 from argschema.schemas import DefaultSchema
 from argschema.fields import (Nested, OutputDir, InputFile, Bool, Float, Int,
-                              OutputFile, NumpyArray, Str)
+                              OutputFile, NumpyArray, Str, Dict)
 from .eye_tracking import PointGenerator, EyeTracker
 from .fit_ellipse import EllipseFitter
 
@@ -101,6 +101,18 @@ class EyeParameters(DefaultSchema):
                      "max_pupil_value)"))
 
 
+class PrefilterParameters(DefaultSchema):
+    apply_prefilter = Bool(
+        default=False,
+        description="Whether or not to apply an image prefilter")
+    prefilter_class = Str(
+        default="CLAHE",
+        description="Prefilter class to use. Currently only supports 'CLAHE'")
+    prefilter_kwargs = Dict(
+        default={},
+        description="Keyword arguments to pass to the prefilter initializer.")
+
+
 class QCParameters(DefaultSchema):
     generate_plots = Bool(
         default=EyeTracker.DEFAULT_GENERATE_QC_OUTPUT,
@@ -132,6 +144,7 @@ class InputParameters(ArgSchema):
     starburst = Nested(StarburstParameters)
     eye_params = Nested(EyeParameters)
     qc = Nested(QCParameters)
+    prefilter = Nested(PrefilterParameters)
 
 
 class OutputSchema(DefaultSchema):
